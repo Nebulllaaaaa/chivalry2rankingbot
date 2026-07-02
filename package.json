@@ -1,0 +1,18 @@
+{
+  "name": "chivalry2rankingbot",
+  "version": "1.0.0",
+  "description": "A starter Discord bot with command and event handlers",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "deploy": "node src/deploy-commands.js",
+    "rebuild": "node src/rebuild-ratings.js",
+    "db": "node src/dump-db.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.11.1",
+    "discord.js": "^14.15.3",
+    "dotenv": "^16.4.5",
+    "openskill": "^5.0.1"
+  }
+}
