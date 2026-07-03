@@ -92,6 +92,28 @@ async function handleButtonInteraction(interaction) {
 		});
 	}
 
+	// Cancel Challenge (Rescind offer before acceptance)
+	else if (action === 'cancel-challenge') {
+		if (interaction.user.id !== challengerId) {
+			return interaction.reply({
+				content: '❌ Only the challenger can rescind this duel offer.',
+				ephemeral: true
+			});
+		}
+
+		const embed = {
+			color: 0x555555,
+			title: '🚫 Challenge Rescinded',
+			description: `<@${challengerId}> has cancelled their duel challenge to <@${opponentId}>.`,
+			timestamp: new Date().toISOString(),
+		};
+
+		await interaction.update({
+			embeds: [embed],
+			components: []
+		});
+	}
+
 	// 3. Cancel Duel
 	else if (action === 'cancel') {
 		const embed = {

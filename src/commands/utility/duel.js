@@ -59,7 +59,11 @@ module.exports = {
 			new ButtonBuilder()
 				.setCustomId(`duel:decline:${challenger.id}:${opponent.id}:${format}`)
 				.setLabel('Decline')
-				.setStyle(ButtonStyle.Danger)
+				.setStyle(ButtonStyle.Danger),
+			new ButtonBuilder()
+				.setCustomId(`duel:cancel-challenge:${challenger.id}:${opponent.id}:${format}`)
+				.setLabel('Cancel')
+				.setStyle(ButtonStyle.Secondary)
 		);
 
 		await interaction.reply({
