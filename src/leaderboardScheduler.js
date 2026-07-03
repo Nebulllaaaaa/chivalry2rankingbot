@@ -1,22 +1,41 @@
-const { getLeaderboard } = require('./database');
+const { getLeaderboard, getAllGuildLeaderboardChannels } = require('./database');
 
 function startLeaderboardScheduler(client) {
-	const channelId = process.env.LEADERBOARD_CHANNEL_ID;
-
-	if (!channelId || channelId === 'your_leaderboard_channel_id_here' || channelId.trim() === '') {
-		console.warn('[WARNING] LEADERBOARD_CHANNEL_ID is not configured in .env. Auto-updating leaderboard is disabled.');
-		return;
-	}
-
-	console.log(`[INFO] Starting leaderboard auto-scheduler for channel ID: ${channelId}`);
+	console.log('[INFO] Starting leaderboard auto-scheduler...');
 
 	// Run once immediately on startup
-	updateLeaderboard(client, channelId);
+	updateAllLeaderboards(client);
 
 	// Run every 3 minutes
 	setInterval(() => {
-		updateLeaderboard(client, channelId);
+		updateAllLeaderboards(client);
 	}, 3 * 60 * 1000);
+}
+
+async function updateAllLeaderboards(client) {
+	try {
+		const configs = getAllGuildLeaderboardChannels();
+		
+		// Map configured channel IDs to a set to remove duplicates
+		const channelIds = new Set(configs.map(c => c.leaderboard_channel_id));
+
+		// Fallback to .env channel if configured and not already added
+		const fallbackChannelId = process.env.LEADERBOARD_CHANNEL_ID;
+		if (fallbackChannelId && fallbackChannelId !== 'your_leaderboard_channel_id_here' && fallbackChannelId.trim() !== '') {
+			channelIds.add(fallbackChannelId);
+		}
+
+		if (channelIds.size === 0) {
+			console.log('[INFO] No leaderboard channels configured. Skipping update.');
+			return;
+		}
+
+		for (const channelId of channelIds) {
+			await updateLeaderboard(client, channelId);
+		}
+	} catch (error) {
+		console.error('[ERROR] Failed to update leaderboards:', error);
+	}
 }
 
 async function updateLeaderboard(client, channelId) {
@@ -73,5 +92,6 @@ async function updateLeaderboard(client, channelId) {
 }
 
 module.exports = {
-	startLeaderboardScheduler
+	startLeaderboardScheduler,
+	updateLeaderboard
 };

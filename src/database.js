@@ -35,6 +35,11 @@ db.exec(`
     FOREIGN KEY(player1_id) REFERENCES players(discord_id),
     FOREIGN KEY(player2_id) REFERENCES players(discord_id)
   );
+
+  CREATE TABLE IF NOT EXISTS guild_config (
+    guild_id TEXT PRIMARY KEY,
+    leaderboard_channel_id TEXT NOT NULL
+  );
 `);
 
 // Safe migration: Add format column to matches if it doesn't already exist
@@ -164,12 +169,37 @@ function getMatchHistory(discordId, limit = 10) {
 	return stmt.all(discordId, discordId, limit);
 }
 
+// Set leaderboard channel for a guild
+function setGuildLeaderboardChannel(guildId, channelId) {
+	const stmt = db.prepare(`
+		INSERT INTO guild_config (guild_id, leaderboard_channel_id)
+		VALUES (?, ?)
+		ON CONFLICT(guild_id) DO UPDATE SET leaderboard_channel_id = excluded.leaderboard_channel_id
+	`);
+	stmt.run(guildId, channelId);
+}
+
+// Get leaderboard channel for a guild
+function getGuildLeaderboardChannel(guildId) {
+	const stmt = db.prepare('SELECT leaderboard_channel_id FROM guild_config WHERE guild_id = ?');
+	const row = stmt.get(guildId);
+	return row ? row.leaderboard_channel_id : null;
+}
+
+// Get all guild leaderboard configurations
+function getAllGuildLeaderboardChannels() {
+	return db.prepare('SELECT guild_id, leaderboard_channel_id FROM guild_config').all();
+}
+
 module.exports = {
 	getPlayer,
 	updatePlayerRating,
 	recordMatch,
 	getLeaderboard,
 	getMatchHistory,
+	setGuildLeaderboardChannel,
+	getGuildLeaderboardChannel,
+	getAllGuildLeaderboardChannels,
 	getMMR,
 	db // Export db instance if raw queries are needed
 };
