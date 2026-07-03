@@ -53,13 +53,26 @@ async function updateLeaderboard(client, channelId) {
 
 		const topPlayers = getLeaderboard(50);
 
+		// Fetch members in batch to resolve server nicknames
+		const memberIds = topPlayers.map(p => p.discord_id);
+		let members;
+		try {
+			members = await channel.guild.members.fetch({ user: memberIds });
+		} catch (error) {
+			console.error('Failed to fetch guild members for scheduled leaderboard:', error);
+			members = new Map();
+		}
+
 		let description = '';
 		if (topPlayers.length === 0) {
 			description = '*No duels have been played yet. The leaderboard is empty!*';
 		} else {
 			topPlayers.forEach((player, index) => {
+				const member = members.get(player.discord_id);
+				const displayName = member ? member.displayName : player.username;
+
 				const emoji = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `\`#${index + 1}\``;
-				description += `${emoji} **${player.username}** — **${player.mmr} MMR** (\`${player.wins}W - ${player.losses}L\`)\n`;
+				description += `${emoji} **${displayName}** — **${player.mmr} MMR** (\`${player.wins}W - ${player.losses}L\`)\n`;
 			});
 		}
 

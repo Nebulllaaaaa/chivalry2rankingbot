@@ -15,10 +15,23 @@ module.exports = {
 			});
 		}
 
+		// Fetch members in batch to resolve server nicknames
+		const memberIds = topPlayers.map(p => p.discord_id);
+		let members;
+		try {
+			members = await interaction.guild.members.fetch({ user: memberIds });
+		} catch (error) {
+			console.error('Failed to fetch guild members for leaderboard:', error);
+			members = new Map();
+		}
+
 		let description = '';
 		topPlayers.forEach((player, index) => {
+			const member = members.get(player.discord_id);
+			const displayName = member ? member.displayName : player.username;
+
 			const emoji = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `\`#${index + 1}\``;
-			description += `${emoji} **${player.username}** — **${player.mmr} MMR** (\`${player.wins}W - ${player.losses}L\`)\n`;
+			description += `${emoji} **${displayName}** — **${player.mmr} MMR** (\`${player.wins}W - ${player.losses}L\`)\n`;
 		});
 
 		const embed = {
