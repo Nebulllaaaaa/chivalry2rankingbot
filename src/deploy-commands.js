@@ -27,20 +27,11 @@ const rest = new REST().setToken(process.env.DISCORD_TOKEN);
 	try {
 		console.log(`Started refreshing ${commands.length} application (/) commands.`);
 
-		let data;
-		if (process.env.GUILD_ID && process.env.GUILD_ID !== 'your_guild_id_here' && process.env.GUILD_ID.trim() !== '') {
-			console.log(`Deploying commands to guild: ${process.env.GUILD_ID}`);
-			data = await rest.put(
-				Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID),
-				{ body: commands },
-			);
-		} else {
-			console.log('Deploying commands globally');
-			data = await rest.put(
-				Routes.applicationCommands(process.env.CLIENT_ID),
-				{ body: commands },
-			);
-		}
+		console.log('Deploying commands globally');
+		const data = await rest.put(
+			Routes.applicationCommands(process.env.CLIENT_ID),
+			{ body: commands },
+		);
 
 		console.log(`Successfully reloaded ${data.length} application (/) commands.`);
 	} catch (error) {
