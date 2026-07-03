@@ -40,7 +40,7 @@ async function updateLeaderboard(client, channelId) {
 		} else {
 			topPlayers.forEach((player, index) => {
 				const emoji = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `\`#${index + 1}\``;
-				description += `${emoji} <@${player.discord_id}> — **${player.mmr} MMR** (\`${player.wins}W - ${player.losses}L\`)\n`;
+				description += `${emoji} **${player.username}** — **${player.mmr} MMR** (\`${player.wins}W - ${player.losses}L\`)\n`;
 			});
 		}
 
