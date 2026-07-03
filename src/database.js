@@ -30,11 +30,19 @@ db.exec(`
     player2_old_sigma REAL NOT NULL,
     player2_new_mu REAL NOT NULL,
     player2_new_sigma REAL NOT NULL,
+    format TEXT DEFAULT 'ft1',
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(player1_id) REFERENCES players(discord_id),
     FOREIGN KEY(player2_id) REFERENCES players(discord_id)
   );
 `);
+
+// Safe migration: Add format column to matches if it doesn't already exist
+try {
+	db.exec("ALTER TABLE matches ADD COLUMN format TEXT DEFAULT 'ft1'");
+} catch (e) {
+	// Column already exists, ignore error
+}
 
 // Helper to calculate visible MMR representation
 function getMMR(mu, sigma) {
@@ -96,13 +104,14 @@ function updatePlayerRating(discordId, mu, sigma, outcome) {
 }
 
 // Record a completed match
-function recordMatch(player1Id, player2Id, winnerId, oldP1, newP1, oldP2, newP2) {
+function recordMatch(player1Id, player2Id, winnerId, oldP1, newP1, oldP2, newP2, format = 'ft1') {
 	const stmt = db.prepare(`
 		INSERT INTO matches (
 			player1_id, player2_id, winner_id,
 			player1_old_mu, player1_old_sigma, player1_new_mu, player1_new_sigma,
-			player2_old_mu, player2_old_sigma, player2_new_mu, player2_new_sigma
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			player2_old_mu, player2_old_sigma, player2_new_mu, player2_new_sigma,
+			format
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`);
 	stmt.run(
 		player1Id,
@@ -115,7 +124,8 @@ function recordMatch(player1Id, player2Id, winnerId, oldP1, newP1, oldP2, newP2)
 		oldP2.mu,
 		oldP2.sigma,
 		newP2.mu,
-		newP2.sigma
+		newP2.sigma,
+		format
 	);
 }
 

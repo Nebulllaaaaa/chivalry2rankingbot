@@ -22,6 +22,16 @@ module.exports = {
 			option.setName('winner')
 				.setDescription('The winner of the duel')
 				.setRequired(true)
+		)
+		.addStringOption(option =>
+			option.setName('format')
+				.setDescription('The duel format')
+				.setRequired(true)
+				.addChoices(
+					{ name: 'First to 1 (FT1)', value: 'ft1' },
+					{ name: 'First to 3 (FT3)', value: 'ft3' },
+					{ name: 'First to 5 (FT5)', value: 'ft5' }
+				)
 		),
 	async execute(interaction) {
 		// Enforce admin permission lock
@@ -35,6 +45,7 @@ module.exports = {
 		const p1User = interaction.options.getUser('player1');
 		const p2User = interaction.options.getUser('player2');
 		const winnerUser = interaction.options.getUser('winner');
+		const format = interaction.options.getString('format');
 
 		if (p1User.id === p2User.id) {
 			return interaction.reply({
@@ -70,9 +81,22 @@ module.exports = {
 		let newP1Rating;
 		let newP2Rating;
 
+		const betaValues = {
+			ft1: 4.25,
+			ft3: 2.25,
+			ft5: 1.25
+		};
+		const betaValue = betaValues[format] || 4.25;
+
+		const formatLabels = {
+			ft1: 'First to 1 (FT1)',
+			ft3: 'First to 3 (FT3)',
+			ft5: 'First to 5 (FT5)'
+		};
+
 		if (winnerUser.id === p1User.id) {
 			// Player 1 won, Player 2 lost
-			const [updatedP1, updatedP2] = rate([[oldP1Rating], [oldP2Rating]]);
+			const [updatedP1, updatedP2] = rate([[oldP1Rating], [oldP2Rating]], { beta: betaValue });
 			newP1Rating = updatedP1[0];
 			newP2Rating = updatedP2[0];
 
@@ -80,7 +104,7 @@ module.exports = {
 			updatePlayerRating(p2User.id, newP2Rating.mu, newP2Rating.sigma, 'loss');
 		} else {
 			// Player 2 won, Player 1 lost
-			const [updatedP2, updatedP1] = rate([[oldP2Rating], [oldP1Rating]]);
+			const [updatedP2, updatedP1] = rate([[oldP2Rating], [oldP1Rating]], { beta: betaValue });
 			newP1Rating = updatedP1[0];
 			newP2Rating = updatedP2[0];
 
@@ -96,7 +120,8 @@ module.exports = {
 			oldP1Rating,
 			newP1Rating,
 			oldP2Rating,
-			newP2Rating
+			newP2Rating,
+			format
 		);
 
 		// Fetch updated data for display
@@ -111,7 +136,7 @@ module.exports = {
 		const embed = {
 			color: 0xff3300,
 			title: '🛠️ Admin Match Override Recorded 🛠️',
-			description: `Admin <@${interaction.user.id}> has manually recorded a match result:\n🎉 **<@${winnerUser.id}>** defeated **<@${loserUser.id}>**!`,
+			description: `Admin <@${interaction.user.id}> has manually recorded a match result:\n🎉 **<@${winnerUser.id}>** defeated **<@${loserUser.id}>**!\n**Format:** ${formatLabels[format]}`,
 			fields: [
 				{
 					name: `🛡️ ${p1User.username}`,

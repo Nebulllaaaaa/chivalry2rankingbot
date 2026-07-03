@@ -87,23 +87,31 @@ function rebuildRatings(blacklist = []) {
 			let outcomeP1 = 'draw';
 			let outcomeP2 = 'draw';
 
+			// Resolve beta value based on match format
+			const betaValues = {
+				ft1: 4.25,
+				ft3: 2.25,
+				ft5: 1.25
+			};
+			const betaValue = betaValues[match.format] || 4.25;
+
 			if (match.winner_id === match.player1_id) {
 				// Player 1 won
-				const [updatedP1, updatedP2] = rate([[p1RatingObj], [p2RatingObj]]);
+				const [updatedP1, updatedP2] = rate([[p1RatingObj], [p2RatingObj]], { beta: betaValue });
 				newP1Rating = updatedP1[0];
 				newP2Rating = updatedP2[0];
 				outcomeP1 = 'win';
 				outcomeP2 = 'loss';
 			} else if (match.winner_id === match.player2_id) {
 				// Player 2 won
-				const [updatedP2, updatedP1] = rate([[p2RatingObj], [p1RatingObj]]);
+				const [updatedP2, updatedP1] = rate([[p2RatingObj], [p1RatingObj]], { beta: betaValue });
 				newP1Rating = updatedP1[0];
 				newP2Rating = updatedP2[0];
 				outcomeP1 = 'loss';
 				outcomeP2 = 'win';
 			} else {
 				// Draw
-				const [updatedP1, updatedP2] = rate([[p1RatingObj], [p2RatingObj]], { rank: [1, 1] });
+				const [updatedP1, updatedP2] = rate([[p1RatingObj], [p2RatingObj]], { rank: [1, 1], beta: betaValue });
 				newP1Rating = updatedP1[0];
 				newP2Rating = updatedP2[0];
 			}

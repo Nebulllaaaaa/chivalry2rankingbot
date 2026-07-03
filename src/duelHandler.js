@@ -2,12 +2,24 @@ const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { getPlayer, updatePlayerRating, recordMatch } = require('./database');
 const { rate } = require('openskill');
 
+const BETA_VALUES = {
+	ft1: 4.25,
+	ft3: 2.25,
+	ft5: 1.25
+};
+
+const FORMAT_LABELS = {
+	ft1: 'First to 1 (FT1)',
+	ft3: 'First to 3 (FT3)',
+	ft5: 'First to 5 (FT5)'
+};
+
 async function handleButtonInteraction(interaction) {
 	const customId = interaction.customId;
 	if (!customId.startsWith('duel:')) return;
 
 	const parts = customId.split(':');
-	const [_, action, challengerId, opponentId, winnerId, reporterId] = parts;
+	const [_, action, challengerId, opponentId] = parts;
 
 	// Permissions check: Only players involved in the duel can interact
 	if (interaction.user.id !== challengerId && interaction.user.id !== opponentId) {
@@ -26,27 +38,28 @@ async function handleButtonInteraction(interaction) {
 			});
 		}
 
+		const format = parts[4] || 'ft1';
 		const challengerUser = await interaction.client.users.fetch(challengerId);
 		const opponentUser = interaction.user;
 
 		const embed = {
 			color: 0xffaa00,
 			title: '⚔️ Duel Active! ⚔️',
-			description: `A duel has started between <@${challengerId}> and <@${opponentId}>!\n\n**Instructions:**\nFight your duel, and once finished, click the button below corresponding to who won.`,
+			description: `A duel has started between <@${challengerId}> and <@${opponentId}>!\n\n**Format:** ${FORMAT_LABELS[format]}\n\n**Instructions:**\nFight your duel, and once finished, click the button below corresponding to who won.`,
 			timestamp: new Date().toISOString(),
 		};
 
 		const row = new ActionRowBuilder().addComponents(
 			new ButtonBuilder()
-				.setCustomId(`duel:report:${challengerId}:${opponentId}:${challengerId}`)
+				.setCustomId(`duel:report:${challengerId}:${opponentId}:${format}:${challengerId}`)
 				.setLabel(`${challengerUser.username} Won`)
 				.setStyle(ButtonStyle.Success),
 			new ButtonBuilder()
-				.setCustomId(`duel:report:${challengerId}:${opponentId}:${opponentId}`)
+				.setCustomId(`duel:report:${challengerId}:${opponentId}:${format}:${opponentId}`)
 				.setLabel(`${opponentUser.username} Won`)
 				.setStyle(ButtonStyle.Success),
 			new ButtonBuilder()
-				.setCustomId(`duel:cancel:${challengerId}:${opponentId}`)
+				.setCustomId(`duel:cancel:${challengerId}:${opponentId}:${format}`)
 				.setLabel('Cancel Duel')
 				.setStyle(ButtonStyle.Danger)
 		);
@@ -96,24 +109,26 @@ async function handleButtonInteraction(interaction) {
 
 	// 4. Report Result
 	else if (action === 'report') {
+		const format = parts[4] || 'ft1';
+		const winnerId = parts[5];
 		const reporter = interaction.user.id;
 		const otherPlayerId = reporter === challengerId ? opponentId : challengerId;
 
 		const embed = {
 			color: 0x3399ff,
 			title: '🏆 Duel Outcome Reported',
-			description: `<@${reporter}> has reported that <@${winnerId}> won the duel.\n\n<@${otherPlayerId}>, please confirm or dispute this result.`,
+			description: `<@${reporter}> has reported that <@${winnerId}> won the duel (${FORMAT_LABELS[format]}).\n\n<@${otherPlayerId}>, please confirm or dispute this result.`,
 			timestamp: new Date().toISOString(),
 		};
 
-		// Confirm custom ID format: duel:confirm:<challengerId>:<opponentId>:<winnerId>:<reporterId>
+		// Confirm custom ID format: duel:confirm:<challengerId>:<opponentId>:<format>:<winnerId>:<reporterId>
 		const row = new ActionRowBuilder().addComponents(
 			new ButtonBuilder()
-				.setCustomId(`duel:confirm:${challengerId}:${opponentId}:${winnerId}:${reporter}`)
+				.setCustomId(`duel:confirm:${challengerId}:${opponentId}:${format}:${winnerId}:${reporter}`)
 				.setLabel('Confirm Result')
 				.setStyle(ButtonStyle.Success),
 			new ButtonBuilder()
-				.setCustomId(`duel:dispute:${challengerId}:${opponentId}:${winnerId}:${reporter}`)
+				.setCustomId(`duel:dispute:${challengerId}:${opponentId}:${format}:${winnerId}:${reporter}`)
 				.setLabel('Dispute Result')
 				.setStyle(ButtonStyle.Danger)
 		);
@@ -126,6 +141,10 @@ async function handleButtonInteraction(interaction) {
 
 	// 5. Confirm Result
 	else if (action === 'confirm') {
+		const format = parts[4] || 'ft1';
+		const winnerId = parts[5];
+		const reporterId = parts[6];
+
 		// Only the non-reporting player can confirm/dispute to prevent self-confirmation
 		if (interaction.user.id === reporterId) {
 			return interaction.reply({
@@ -150,11 +169,14 @@ async function handleButtonInteraction(interaction) {
 		let winnerUser;
 		let loserUser;
 
+		// Map format to beta value (default to FT1 = 4.25 if not matched)
+		const betaValue = BETA_VALUES[format] || 4.25;
+
 		if (winnerId === challengerId) {
 			winnerUser = challengerUser;
 			loserUser = opponentUser;
 			// Challenger won, opponent lost
-			const [updatedChallenger, updatedOpponent] = rate([[oldChallengerRating], [oldOpponentRating]]);
+			const [updatedChallenger, updatedOpponent] = rate([[oldChallengerRating], [oldOpponentRating]], { beta: betaValue });
 			newChallengerRating = updatedChallenger[0];
 			newOpponentRating = updatedOpponent[0];
 
@@ -164,7 +186,7 @@ async function handleButtonInteraction(interaction) {
 			winnerUser = opponentUser;
 			loserUser = challengerUser;
 			// Opponent won, challenger lost
-			const [updatedOpponent, updatedChallenger] = rate([[oldOpponentRating], [oldChallengerRating]]);
+			const [updatedOpponent, updatedChallenger] = rate([[oldOpponentRating], [oldChallengerRating]], { beta: betaValue });
 			newOpponentRating = updatedOpponent[0];
 			newChallengerRating = updatedChallenger[0];
 
@@ -180,7 +202,8 @@ async function handleButtonInteraction(interaction) {
 			oldChallengerRating,
 			newChallengerRating,
 			oldOpponentRating,
-			newOpponentRating
+			newOpponentRating,
+			format
 		);
 
 		// Get updated MMRs for announcement
@@ -195,7 +218,7 @@ async function handleButtonInteraction(interaction) {
 		const embed = {
 			color: 0x00ff00,
 			title: '🏁 Duel Result Confirmed! 🏁',
-			description: `🎉 **<@${winnerId}>** has defeated **<@${winnerId === challengerId ? opponentId : challengerId}>**!`,
+			description: `🎉 **<@${winnerId}>** has defeated **<@${winnerId === challengerId ? opponentId : challengerId}>**!\n**Format:** ${FORMAT_LABELS[format]}`,
 			fields: [
 				{
 					name: `🛡️ ${challengerUser.username} (Challenger)`,
@@ -219,6 +242,7 @@ async function handleButtonInteraction(interaction) {
 
 	// 6. Dispute Result
 	else if (action === 'dispute') {
+		const reporterId = parts[6];
 		if (interaction.user.id === reporterId) {
 			return interaction.reply({
 				content: '❌ You cannot dispute your own report!',
