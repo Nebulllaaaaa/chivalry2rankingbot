@@ -24,7 +24,12 @@ module.exports = {
 			}
 		} else if (interaction.isButton()) {
 			try {
-				await handleButtonInteraction(interaction);
+				if (interaction.customId.startsWith('tourney:')) {
+					const { handleTournamentButton } = require('../tournamentHandler');
+					await handleTournamentButton(interaction);
+				} else {
+					await handleButtonInteraction(interaction);
+				}
 			} catch (error) {
 				console.error('Error handling button interaction:', error);
 				if (interaction.replied || interaction.deferred) {
