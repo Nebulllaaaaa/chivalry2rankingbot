@@ -65,7 +65,7 @@ module.exports = {
 			const formattedDate = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 			const formatLabel = match.format ? match.format.toUpperCase() : 'FT1';
 
-			description += `• **${formattedDate}**: ${outcomeEmoji} ${outcomeText} **${opponentName}** (\`${formatLabel}\`)\n   \`${oldMmr}\` ➔ \`${newMmr}\` (${formattedDiff})\n\n`;
+			description += `• **${formattedDate}** (ID: \`${match.id}\`): ${outcomeEmoji} ${outcomeText} **${opponentName}** (\`${formatLabel}\`)\n   \`${oldMmr}\` ➔ \`${newMmr}\` (${formattedDiff})\n\n`;
 		});
 
 		const embed = {
